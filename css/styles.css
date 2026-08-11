@@ -1,0 +1,1207 @@
+/* ==========================================================================
+   Chord Trainer — styles.css
+   Track B. Styles the DOM contract in DESIGN.md §7 only. No JS, no HTML,
+   no external resources (no @import, no webfonts, no network of any kind).
+
+   Design intent (DESIGN.md §5): the prompt IS the page. Dark first, because
+   practice happens in dim rooms. Everything is sized so a note is legible
+   from across a room with an instrument in your hands.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Palette + scale — every color/size lives here, one place to retune.
+   -------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: dark light;
+
+  /* -- type ------------------------------------------------------------- */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  /* -- surfaces (dark, the default) ------------------------------------- */
+  --bg: #0a0c10;
+  --bg-glow: #141a24;
+  --surface: #141922;
+  --surface-2: #1c222d;
+  --surface-3: #252c39;
+  --border: #2b3341;
+  --border-strong: #3d4757;
+
+  /* -- ink -------------------------------------------------------------- */
+  --text: #eef2f7;
+  --text-dim: #9aa6b6;
+  --text-faint: #6b7686;
+
+  /* -- accent (interval color, active states) --------------------------- */
+  --accent: #f6b73c;
+  --accent-bright: #ffcb63;
+  --accent-dim: #8a6a24;
+  --accent-ink: #14100a; /* text drawn ON a solid accent fill */
+  --accent-wash: rgba(246, 183, 60, 0.12);
+  --accent-wash-strong: rgba(246, 183, 60, 0.22);
+
+  /* -- focus ring: deliberately NOT the accent, so it never reads as
+        "selected". High contrast on both themes. ------------------------ */
+  --focus: #79c6ff;
+  --focus-ring: 0 0 0 3px var(--bg), 0 0 0 6px var(--focus);
+
+  --scrim: rgba(4, 6, 10, 0.66);
+  --shadow-panel: -24px 0 60px rgba(0, 0, 0, 0.55);
+  --shadow-btn: 0 6px 24px rgba(0, 0, 0, 0.35);
+
+  /* -- geometry --------------------------------------------------------- */
+  --tap: 44px; /* minimum touch target, everywhere */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+  --pad-page: clamp(0.875rem, 3vw, 2rem);
+  --panel-w: min(27rem, 100vw);
+
+  /* -- prompt type scale (overridden in short/landscape viewports) ------- */
+  --size-note: clamp(3.75rem, 18vw, 16rem);
+  --size-interval: clamp(1.375rem, 7vw, 5.25rem);
+  --size-target: clamp(0.95rem, 3.2vw, 2rem);
+
+  /* -- motion ----------------------------------------------------------- */
+  --dur-flash: 150ms;
+  --dur-panel: 240ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* Light variant. Same variables, warmer paper tones; the accent darkens so
+   large accent text still clears contrast on a near-white field. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f5f2;
+    --bg-glow: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f0eeea;
+    --surface-3: #e5e2dc;
+    --border: #d9d5cd;
+    --border-strong: #b9b3a8;
+
+    --text: #16181d;
+    --text-dim: #5b6270;
+    --text-faint: #838b99;
+
+    --accent: #a4620a;
+    --accent-bright: #7d4a05;
+    --accent-dim: #d9b784;
+    --accent-ink: #fffaf1;
+    --accent-wash: rgba(164, 98, 10, 0.1);
+    --accent-wash-strong: rgba(164, 98, 10, 0.18);
+
+    --focus: #0b5fce;
+
+    --scrim: rgba(30, 27, 22, 0.42);
+    --shadow-panel: -24px 0 60px rgba(40, 35, 25, 0.18);
+    --shadow-btn: 0 6px 20px rgba(40, 35, 25, 0.12);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. Reset / base
+   -------------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The JS toggles the `hidden` attribute on #prompt-target, #settings-panel and
+   #scrim. This wins over every layout rule below on purpose, so no `display`
+   declaration in this file can ever resurrect a hidden element. */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  overflow-x: hidden; /* never a horizontal scrollbar, 320px → ultrawide */
+}
+
+body {
+  margin: 0;
+  min-height: 100vh; /* fallback */
+  min-height: 100dvh; /* mobile browser chrome must not clip the NEXT button */
+  display: grid;
+  grid-template-rows: auto 1fr;
+  font-family: var(--font-ui);
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: radial-gradient(
+    120% 90% at 50% -10%,
+    var(--bg-glow) 0%,
+    var(--bg) 62%
+  );
+  background-attachment: fixed;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* env() falls back to 0px where there is no notch/rounded display */
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* One focus treatment for the whole app — it is meant to be keyboard driven. */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+/* Elements sitting on top of their own background get the double ring so the
+   indicator survives on any surface. */
+.icon-btn:focus-visible,
+.next-btn:focus-visible,
+.settings-panel :is(button, label, summary):focus-visible,
+.settings-panel :is(button, label):has(input:focus-visible) {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* --------------------------------------------------------------------------
+   3. Header
+   -------------------------------------------------------------------------- */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: clamp(0.5rem, 1.6vw, 1rem) var(--pad-page);
+  min-height: calc(var(--tap) + 0.5rem);
+}
+
+.app-title {
+  margin: 0;
+  font-size: clamp(0.8125rem, 1.6vw, 1rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.icon-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0.25rem;
+  font-size: 1.375rem;
+  line-height: 1;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--dur-panel) var(--ease),
+    background-color var(--dur-panel) var(--ease),
+    border-color var(--dur-panel) var(--ease), transform 120ms var(--ease);
+}
+
+.icon-btn:hover {
+  color: var(--text);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
+}
+
+.icon-btn[aria-expanded="true"] {
+  color: var(--accent);
+  background: var(--accent-wash);
+  border-color: var(--accent-dim);
+}
+
+/* --------------------------------------------------------------------------
+   4. Stage — prompt on top (centered in the free space), NEXT in the lower
+      third, hint underneath.
+   -------------------------------------------------------------------------- */
+
+.stage {
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  justify-items: center;
+  align-items: center;
+  gap: clamp(1rem, 3.5vh, 2.25rem);
+  width: 100%;
+  max-width: 60rem;
+  margin-inline: auto;
+  padding: 0 var(--pad-page) clamp(1.5rem, 6vh, 3.5rem);
+  min-height: 0; /* let the 1fr row shrink instead of overflowing */
+  text-align: center;
+}
+
+/* --- the prompt ----------------------------------------------------------- */
+
+.prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.15rem, 1vh, 0.6rem);
+  width: 100%;
+  min-width: 0;
+  /* the animation transform-origin: grow from the note, not the box top */
+  transform-origin: 50% 45%;
+}
+
+.prompt-note {
+  font-size: var(--size-note);
+  font-weight: 700;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  font-variant-numeric: lining-nums tabular-nums;
+  /* keeps a two-glyph name like "Bb" from ever wrapping */
+  white-space: nowrap;
+  max-width: 100%;
+  text-wrap: balance;
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.35);
+}
+
+.prompt-interval {
+  font-size: var(--size-interval);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: 0.005em;
+  color: var(--accent);
+  max-width: 100%;
+  text-wrap: balance;
+}
+
+.prompt-target {
+  margin-top: clamp(0.35rem, 1.6vh, 1rem);
+  font-size: var(--size-target);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* --- flash on change ------------------------------------------------------
+   app.js removes .is-flash, forces a reflow, then re-adds it. A CSS animation
+   (not a transition) restarts from frame 0 on every re-add, so an identical
+   prompt still reads as a brand new event. `both` holds the end frame so the
+   prompt never lands on an interpolated value. */
+
+@keyframes prompt-flash {
+  from {
+    opacity: 0.1;
+    transform: scale(0.955);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.prompt.is-flash {
+  animation: prompt-flash var(--dur-flash) var(--ease) both;
+}
+
+/* --- NEXT ----------------------------------------------------------------- */
+
+.next-btn {
+  --next-bg: var(--surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: min(26rem, 100%);
+  min-width: var(--tap);
+  min-height: max(var(--tap), clamp(4rem, 11vh, 6rem));
+  padding: 0.75rem 2rem;
+  font-size: clamp(1.0625rem, 3.2vw, 1.625rem);
+  font-weight: 650;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--next-bg);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-btn);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: background-color var(--dur-panel) var(--ease),
+    border-color var(--dur-panel) var(--ease),
+    color var(--dur-panel) var(--ease), transform 90ms var(--ease),
+    box-shadow var(--dur-panel) var(--ease);
+}
+
+.next-btn:hover {
+  --next-bg: var(--surface-2);
+  border-color: var(--accent-dim);
+  color: var(--accent-bright);
+}
+
+.next-btn:active {
+  --next-bg: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  transform: translateY(2px) scale(0.99);
+  box-shadow: none;
+}
+
+/* auto-advance running: the button becomes a status light as well as a
+   control, so you can see the app is driving without reading the panel. */
+.next-btn.is-running {
+  border-color: var(--accent);
+  color: var(--accent-bright);
+  background: var(--accent-wash);
+  animation: next-pulse 1.6s ease-in-out infinite;
+}
+
+.next-btn.is-running:hover {
+  background: var(--accent-wash-strong);
+}
+
+@keyframes next-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-wash);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(246, 183, 60, 0);
+  }
+}
+
+/* --- hint line ------------------------------------------------------------ */
+
+.hint {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  font-size: clamp(0.75rem, 1.9vw, 0.9375rem);
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 2.5em;
+  padding: 0.15em 0.55em;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-sm);
+}
+
+#session-count {
+  color: var(--text-dim);
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   5. Settings: scrim + slide-over panel
+   -------------------------------------------------------------------------- */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--scrim);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  visibility: hidden;
+  cursor: pointer;
+  transition: opacity var(--dur-panel) var(--ease),
+    visibility 0s linear var(--dur-panel);
+}
+
+.scrim.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--dur-panel) var(--ease), visibility 0s;
+}
+
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2.4vh, 1.75rem);
+  width: var(--panel-w); /* full-width sheet at ≤ 27rem viewports */
+  max-width: 100vw;
+  height: 100vh; /* fallback */
+  height: 100dvh;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  padding-top: max(clamp(1rem, 3vw, 1.5rem), env(safe-area-inset-top));
+  padding-bottom: max(clamp(1.5rem, 4vw, 2.5rem), env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  color: var(--text);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-panel);
+  /* Closed state is transform-only, on purpose. The `hidden` attribute (set by
+     app.js, enforced by the [hidden] rule above) is what actually removes the
+     panel — these two mechanisms stack rather than fight. Deliberately no
+     `visibility: hidden` here: app.js un-hides the panel and focuses its first
+     control in the same task, before the .is-open class lands on the next
+     frame, and a visibility-hidden element cannot take focus.
+     A fixed-position element does not create page scroll, so the off-screen
+     panel never produces a horizontal scrollbar. */
+  transform: translateX(100%);
+  transition: transform var(--dur-panel) var(--ease);
+}
+
+.settings-panel.is-open {
+  transform: translateX(0);
+}
+
+/* When app.js flips `hidden` off in the same frame as it adds .is-open there is
+   no previous rendered state to animate from; @starting-style supplies one.
+   Ignored harmlessly by engines that do not support it. */
+@starting-style {
+  .settings-panel.is-open {
+    transform: translateX(100%);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. Settings panel contents.
+      The markup is generated by js/settings.js, so everything below is written
+      to be markup-agnostic: it keys off element types, common container names
+      and state signals rather than one exact structure.
+   -------------------------------------------------------------------------- */
+
+.settings-panel > :is(h1, h2):first-child,
+.settings-panel .panel-title,
+.settings-panel .settings-title {
+  margin: 0;
+  font-size: 1.1875rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--text);
+}
+
+/* panel header row (title + close button), however it is wrapped */
+.settings-panel > header,
+.settings-panel .panel-header,
+.settings-panel .settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-panel :is(h2, h3, h4, legend) {
+  margin: 0 0 0.625rem;
+  padding: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.settings-panel section,
+.settings-panel fieldset,
+.settings-panel .settings-section {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+/* Sections that are direct children of the panel are spaced by its flex `gap`.
+   Only add margin when they sit inside a wrapper that has no gap of its own,
+   otherwise the spacing doubles. */
+.settings-panel
+  :is(div, form, ul, ol)
+  > :is(section, fieldset, .settings-section)
+  + :is(section, fieldset, .settings-section) {
+  margin-top: clamp(1rem, 2.4vh, 1.75rem);
+}
+
+.settings-panel hr {
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--border);
+}
+
+.settings-panel p,
+.settings-panel .help,
+.settings-panel small {
+  margin: 0.375rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.settings-panel ul,
+.settings-panel ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* --- 6a. control rows ----------------------------------------------------
+   Covers both shapes: a <label> wrapping its input, and a row <div> holding a
+   sibling label + input (+ output). Flex `order` puts the label on the left and
+   the control on the right regardless of source order. */
+
+.settings-panel :is(.setting-row, .settings-row, .field-row, .row),
+.settings-panel label:has(> input[type="checkbox"]),
+.settings-panel label:has(> input[type="radio"]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.875rem;
+  width: 100%;
+  min-height: var(--tap);
+  margin: 0;
+  padding: 0.4rem 0.625rem;
+  font-size: 0.9375rem;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  transition: background-color 140ms var(--ease),
+    border-color 140ms var(--ease);
+}
+
+.settings-panel :is(.setting-row, .settings-row, .field-row, .row):hover,
+.settings-panel label:has(> input[type="checkbox"]):hover,
+.settings-panel label:has(> input[type="radio"]):hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+/* the text side takes the slack; the control side never shrinks */
+.settings-panel
+  :is(.setting-row, .settings-row, .field-row, .row)
+  > :is(label, .setting-label, span) {
+  order: 1;
+  flex: 1 1 8rem;
+  min-width: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.settings-panel :is(.setting-row, .settings-row, .field-row, .row) > input,
+.settings-panel :is(.setting-row, .settings-row, .field-row, .row) > select {
+  order: 3;
+}
+
+.settings-panel
+  :is(.setting-row, .settings-row, .field-row, .row)
+  > :is(output, .setting-value, .value, .range-value) {
+  order: 2;
+}
+
+/* a checked row reads slightly stronger than its neighbours */
+.settings-panel :is(.setting-row, .settings-row):has(input:checked),
+.settings-panel label:has(> input[type="checkbox"]:checked),
+.settings-panel label:has(> input[type="radio"]:checked) {
+  color: var(--text);
+}
+
+.settings-panel
+  :is(.setting-row, .settings-row):has(input:checked)
+  > :is(label, .setting-label) {
+  font-weight: 600;
+}
+
+.settings-panel input[type="checkbox"],
+.settings-panel input[type="radio"] {
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin: 0;
+  margin-inline-start: auto; /* pin to the right edge of its row */
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* A 22px checkbox is not a 44px target. Rather than inflating the control
+   itself, the row's <label for=...> is stretched over the whole row with a
+   pseudo-element, so any press anywhere in the ≥48px row toggles it. Only
+   checkbox/radio rows get the overlay — it must never cover a slider. */
+.settings-panel :is(.setting-row-check, .setting-row-checkbox),
+.settings-panel
+  :is(.setting-row, .settings-row, .field-row, .row):has(
+    > input:is([type="checkbox"], [type="radio"])
+  ) {
+  position: relative;
+  min-height: max(var(--tap), 3rem);
+}
+
+.settings-panel :is(.setting-row-check, .setting-row-checkbox) > .setting-label,
+.settings-panel
+  :is(.setting-row, .settings-row, .field-row, .row):has(
+    > input:is([type="checkbox"], [type="radio"])
+  )
+  > label {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+}
+
+.settings-panel
+  :is(.setting-row-check, .setting-row-checkbox)
+  > .setting-label::after,
+.settings-panel
+  :is(.setting-row, .settings-row, .field-row, .row):has(
+    > input:is([type="checkbox"], [type="radio"])
+  )
+  > label::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* Slider rows: label + readout share the first line, the track spans the
+   full width underneath it — a 44px-tall track squeezed next to a label is
+   miserable to hit. */
+.settings-panel :is(.setting-row, .settings-row, .row):has(input[type="range"]) {
+  padding-bottom: 0.25rem;
+}
+
+.settings-panel
+  :is(.setting-row, .settings-row, .row)
+  > input[type="range"] {
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+/* label wrapping its own range input stacks instead */
+.settings-panel label:has(> input[type="range"]) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.375rem;
+}
+
+/* the transient "keep at least one" announcement under each chip group */
+.settings-panel .settings-status,
+.settings-panel [role="status"] {
+  min-height: 1.2em; /* reserved, so a message never shifts the layout */
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--accent);
+}
+
+/* --- 6b. toggle chips (notes + intervals) --------------------------------
+   Container: known grid class names plus a :has() fallback, so it works with
+   whatever the generator emitted. Justified wrap rather than a fixed grid: the
+   same rule then suits both the two-character note chips and the long interval
+   labels ("Perfect 5th") without needing separate containers. */
+
+.settings-panel :is(.note-grid, .notes-grid, .note-toggles, .notes),
+.settings-panel :is(.interval-grid, .intervals-grid, .interval-toggles),
+.settings-panel :is(.toggle-grid, .chip-grid, .chips, .grid, .toggles),
+.settings-panel
+  :is(div, ul, ol, fieldset, section):has(> :is(button, label).chip),
+.settings-panel
+  :is(div, ul, ol, fieldset, section):has(> li > :is(button, label).chip),
+.settings-panel
+  :is(div, ul, ol, fieldset, section):has(> button[aria-pressed]),
+.settings-panel
+  :is(div, ul, ol, fieldset, section):has(> li > button[aria-pressed]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  justify-content: flex-start; /* a partial last row stays left-aligned */
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  list-style: none;
+}
+
+/* li wrappers, if the generator used a list */
+.settings-panel
+  :is(
+    .note-grid,
+    .notes-grid,
+    .note-toggles,
+    .notes,
+    .interval-grid,
+    .intervals-grid,
+    .interval-toggles,
+    .toggle-grid,
+    .chip-grid,
+    .chips,
+    .toggles
+  )
+  > li {
+  display: contents;
+}
+
+/* Chip itself. Matches an explicit .chip/.toggle class OR any button/label
+   sitting directly inside one of the known grids. */
+.settings-panel
+  :is(
+    .chip,
+    .toggle,
+    .note-toggle,
+    .interval-toggle,
+    :is(
+        .note-grid,
+        .notes-grid,
+        .note-toggles,
+        .notes,
+        .interval-grid,
+        .intervals-grid,
+        .interval-toggles,
+        .toggle-grid,
+        .chip-grid,
+        .chips,
+        .toggles
+      )
+      :is(button, label)
+  ) {
+  position: relative;
+  display: inline-flex;
+  /* No grow: a chip is exactly as wide as its label (never narrower than the
+     touch minimum), so "A" and "Perfect 4th" read as the same component and a
+     lone chip on the last row does not stretch into a banner. */
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: var(--tap);
+  min-width: max(var(--tap), 3.5rem);
+  max-width: 100%;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: color 140ms var(--ease), background-color 140ms var(--ease),
+    border-color 140ms var(--ease), transform 90ms var(--ease);
+}
+
+.settings-panel
+  :is(
+    .chip,
+    .toggle,
+    .note-toggle,
+    .interval-toggle,
+    :is(
+        .note-grid,
+        .notes-grid,
+        .note-toggles,
+        .notes,
+        .interval-grid,
+        .intervals-grid,
+        .interval-toggles,
+        .toggle-grid,
+        .chip-grid,
+        .chips,
+        .toggles
+      )
+      :is(button, label)
+  ):hover {
+  color: var(--text);
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+
+/* If the checkbox lives *inside* a chip it is decoration — the chip is the
+   control. Hide it visually but keep it focusable and screen-reader visible. */
+.settings-panel
+  :is(
+    .chip,
+    .toggle,
+    .note-toggle,
+    .interval-toggle,
+    :is(
+        .note-grid,
+        .notes-grid,
+        .note-toggles,
+        .notes,
+        .interval-grid,
+        .intervals-grid,
+        .interval-toggles,
+        .toggle-grid,
+        .chip-grid,
+        .chips,
+        .toggles
+      )
+      label
+  )
+  > input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  clip-path: inset(50%);
+  pointer-events: none;
+}
+
+/* Checked / on state. Every plausible signal the generator might use:
+     .is-on  .is-selected  .is-active  .selected  .active  .on
+     [aria-pressed="true"]  [aria-checked="true"]  [data-on="true"]
+     :has(input:checked)   (label-wrapped checkbox) */
+.settings-panel
+  :is(
+    .chip,
+    .toggle,
+    .note-toggle,
+    .interval-toggle,
+    :is(
+        .note-grid,
+        .notes-grid,
+        .note-toggles,
+        .notes,
+        .interval-grid,
+        .intervals-grid,
+        .interval-toggles,
+        .toggle-grid,
+        .chip-grid,
+        .chips,
+        .toggles
+      )
+      :is(button, label)
+  ):is(
+    .is-on,
+    .is-selected,
+    .is-active,
+    .is-enabled,
+    .selected,
+    .active,
+    .on,
+    .checked,
+    [aria-pressed="true"],
+    [aria-checked="true"],
+    [data-on="true"],
+    [data-selected="true"],
+    [data-state="on"],
+    :has(input:checked)
+  ) {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2) inset;
+}
+
+/* keep the hover shift legible on an already-on chip */
+.settings-panel
+  :is(
+    .chip,
+    .toggle,
+    .note-toggle,
+    .interval-toggle,
+    :is(
+        .note-grid,
+        .notes-grid,
+        .note-toggles,
+        .notes,
+        .interval-grid,
+        .intervals-grid,
+        .interval-toggles,
+        .toggle-grid,
+        .chip-grid,
+        .chips,
+        .toggles
+      )
+      :is(button, label)
+  ):is(
+    .is-on,
+    .is-selected,
+    .is-active,
+    .is-enabled,
+    .selected,
+    .active,
+    .on,
+    .checked,
+    [aria-pressed="true"],
+    [aria-checked="true"],
+    [data-on="true"],
+    [data-selected="true"],
+    [data-state="on"],
+    :has(input:checked)
+  ):hover {
+  color: var(--accent-ink);
+  background: var(--accent-bright);
+  border-color: var(--accent-bright);
+}
+
+.settings-panel :is(.chip, .toggle, .note-toggle, .interval-toggle):active {
+  transform: scale(0.96);
+}
+
+/* The last enabled note/interval is marked aria-disabled but stays ON and
+   stays clickable (it explains itself instead of going dead) — so it must NOT
+   be dimmed like a real disabled control. Cursor only. */
+.settings-panel :is(.chip, .toggle)[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* ...and .is-locked is the transient "you can't turn this one off" pulse. */
+@keyframes chip-locked {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+.settings-panel :is(.chip, .toggle).is-locked {
+  animation: chip-locked 220ms var(--ease) 1;
+  box-shadow: 0 0 0 3px var(--accent-wash-strong);
+}
+
+/* genuinely disabled controls */
+.settings-panel :is(button, label, input, select):disabled,
+.settings-panel :is(.chip, .toggle).is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* --- 6c. ranges, numbers, selects ---------------------------------------- */
+
+.settings-panel input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: var(--tap); /* full-height hit area, not just the 4px track */
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.settings-panel input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+}
+
+.settings-panel input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+}
+
+.settings-panel input[type="range"]::-moz-range-progress {
+  height: 6px;
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+}
+
+.settings-panel input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -9px; /* centers the thumb on a 6px track */
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.settings-panel input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.settings-panel input[type="range"]:focus-visible {
+  outline: none;
+}
+
+.settings-panel input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px var(--focus);
+}
+
+.settings-panel input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px var(--focus);
+}
+
+/* live value readout next to a slider, whatever it is called */
+.settings-panel output,
+.settings-panel .value,
+.settings-panel .range-value,
+.settings-panel .setting-value {
+  flex: none;
+  min-width: 4ch;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: lining-nums tabular-nums;
+  text-align: right;
+  color: var(--accent);
+}
+
+.settings-panel :is(select, input[type="number"], input[type="text"]) {
+  min-height: var(--tap);
+  padding: 0.4rem 0.625rem;
+  font-size: 0.9375rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* --------------------------------------------------------------------------
+   7. Viewport adaptations
+   -------------------------------------------------------------------------- */
+
+/* Short / landscape phones: 18vw would push the button off screen, so the
+   prompt scale switches to being height-driven. */
+@media (max-height: 560px) and (orientation: landscape) {
+  :root {
+    --size-note: clamp(2.5rem, 22vh, 8rem);
+    --size-interval: clamp(1.125rem, 9vh, 3rem);
+    --size-target: clamp(0.875rem, 3.5vh, 1.25rem);
+  }
+
+  .stage {
+    gap: clamp(0.5rem, 2vh, 1rem);
+    padding-bottom: clamp(0.75rem, 3vh, 1.5rem);
+  }
+
+  .next-btn {
+    min-height: max(var(--tap), 3.25rem);
+  }
+}
+
+/* Very small phones: reclaim the horizontal padding. */
+@media (max-width: 22.5rem) {
+  :root {
+    --pad-page: 0.75rem;
+  }
+
+  .next-btn {
+    letter-spacing: 0.12em;
+  }
+}
+
+/* Ultrawide / TV across the room: the clamp ceilings already hold the type,
+   this just keeps the composition from drifting apart. */
+@media (min-width: 100rem) {
+  .stage {
+    max-width: 72rem;
+  }
+}
+
+/* Coarse pointers get roomier targets. */
+@media (pointer: coarse) {
+  :root {
+    --tap: 48px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --text-dim: var(--text);
+    --text-faint: var(--text);
+    --border: var(--border-strong);
+  }
+
+  .next-btn {
+    border-color: var(--text);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. Reduced motion — every animation and transition in this file is off.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+
+  .prompt.is-flash {
+    animation: none;
+  }
+
+  .next-btn.is-running {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--accent-wash-strong);
+  }
+
+  .next-btn:active,
+  .icon-btn:active,
+  .settings-panel :is(.chip, .toggle, .note-toggle, .interval-toggle):active {
+    transform: none;
+  }
+
+  /* visibility must still flip instantly, not linger behind a delay */
+  .scrim,
+  .settings-panel {
+    transition: none;
+  }
+}

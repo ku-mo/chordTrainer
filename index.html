@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Random note and interval drill for muscle memory practice.">
+  <title>Chord Trainer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#127925;</text></svg>">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1 class="app-title">Chord Trainer</h1>
+    <button id="settings-toggle" class="icon-btn" aria-expanded="false"
+            aria-controls="settings-panel" aria-label="Settings" title="Settings">&#9881;</button>
+  </header>
+
+  <main class="stage">
+    <div id="prompt" class="prompt" aria-live="polite" aria-atomic="true">
+      <div id="prompt-note" class="prompt-note">&mdash;</div>
+      <div id="prompt-interval" class="prompt-interval">press next</div>
+      <div id="prompt-target" class="prompt-target" hidden></div>
+    </div>
+    <button id="next-btn" class="next-btn">Next</button>
+    <p class="hint">
+      <kbd>space</kbd> &middot; <span id="session-count">0</span> drilled
+    </p>
+  </main>
+
+  <aside id="settings-panel" class="settings-panel" aria-label="Settings" hidden></aside>
+  <div id="scrim" class="scrim" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
