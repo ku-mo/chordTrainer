@@ -1,5 +1,7 @@
 # Chord Trainer
 
+**→ [ku-mo.github.io/chordTrainer](https://ku-mo.github.io/chordTrainer/)**
+
 A random note + interval drill for muscle memory practice. Hit the button, get a
 target, play it, repeat.
 
@@ -9,7 +11,7 @@ C   Major 3rd
 Gb  Perfect 5th
 ```
 
-## Run it
+## Run it locally
 
 No build, no dependencies. It does need to be served over HTTP (the app uses ES
 modules, which browsers refuse to load from `file://`):
@@ -73,3 +75,10 @@ node --test          # 34 tests, no dependencies
 
 Run it bare from the project root — `node --test tests/` fails on Node 26,
 which treats the positional as a glob and chokes on a bare directory.
+
+## Deploying
+
+GitHub Pages serves `main` at the repo root — no Actions workflow, no build.
+Every asset path is relative, so the site works unchanged from a `/chordTrainer/`
+subpath. `.nojekyll` keeps Jekyll from touching the files. Pushing to `main`
+redeploys.
